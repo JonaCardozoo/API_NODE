@@ -1,8 +1,13 @@
+require('dotenv').config();
 const mongoose = require('mongoose');
+const dbUrl = process.env.DATABASE_URL;
 
 async function dbconnect() {
   try {
-    await mongoose.connect('mongodb://127.0.0.1:27017/base');
+    if (!dbUrl) {
+      throw new Error("La URI de conexión a MongoDB no está definida.");
+    }
+    await mongoose.connect(dbUrl);
     console.log('Conexión exitosa a MongoDB');
   } catch (error) {
     console.error('Error al conectar a MongoDB:', error);
