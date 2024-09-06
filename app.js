@@ -89,17 +89,27 @@ app.post('/register', async (req, res) => {
     try {
         
         const existingUser = await ModelUser.findOne({ username });
-        if (existingUser) return res.status(400).json({ msg: 'User already exists' });
+        if (existingUser) {
+            return res.status(400).json({ msg: 'User already exists' });
+        }
+
+        
+        const existingUsers = await ModelUser.find();
+        const role = existingUsers.length === 0 ? 'admin' : 'user';
 
         
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
         
-        const newUser = new User({ username, password: hashedPassword });
+        const newUser = new ModelUser({
+            username,
+            password: hashedPassword,
+            role 
+        });
         await newUser.save();
 
-        res.status(201).json({ msg: 'User registered successfully' });
+        res.status(201).json({ msg: 'User registered successfully', role });
     } catch (err) {
         res.status(500).json({ msg: 'Server error' });
     }
@@ -111,16 +121,29 @@ app.post('/login', async (req, res) => {
     try {
         
         const user = await ModelUser.findOne({ username });
-        if (!user) return res.status(400).json({ msg: 'Invalid credentials' });
+        if (!user) {
+            return res.status(400).json({ msg: 'User does not exist' });
+        }
 
-        
+       
         const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return res.status(400).json({ msg: 'Invalid credentials' });
+        if (!isMatch) {
+            return res.status(400).json({ msg: 'Invalid credentials' });
+        }
 
         
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        const payload = {
+            user: {
+                id: user._id,
+                role: user.rol 
+            }
+        };
 
-        res.json({ token });
+        
+        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+        // Devolver el token y el rol del usuario
+        res.json({ token, role: user.rol });
     } catch (err) {
         res.status(500).json({ msg: 'Server error' });
     }

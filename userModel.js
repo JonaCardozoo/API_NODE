@@ -2,10 +2,17 @@ const mongoose = require('mongoose');
 const userSchema = new mongoose.Schema(
     {
         usuario:{
-            type:String
+            type:String,
+            required:true,
+            unique:true
         },
         password:{
-            type:String
+            type:String,
+            required:true
+        },
+        rol:{
+            type:String,
+            default:'user'
         }
         
     },
