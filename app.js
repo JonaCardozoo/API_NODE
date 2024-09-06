@@ -10,7 +10,7 @@ const router = express.Router();
 
 
 app.use(cors({
-    origin: 'https://proyecto-noticiero.vercel.app/', // Permite solicitudes desde tu dominio local
+    origin: 'https://proyecto-noticiero.vercel.app', // Permite solicitudes desde tu dominio local
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
   }));
