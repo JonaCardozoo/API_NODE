@@ -2,8 +2,11 @@ const express = require('express');
 const mongoose = require('mongoose');
 const dbconnect = require('./config'); 
 const ModelUser = require('./userModel');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const app = express();
 const router = express.Router();
+
 
 router.post("/", async (req, res) => {
     try {
@@ -78,6 +81,71 @@ router.delete("/:id", async (req, res) => {
         res.status(500).send(error.message);
     }
 });
+
+
+app.post('/register', async (req, res) => {
+    const { username, password } = req.body;
+
+    try {
+        
+        const existingUser = await ModelUser.findOne({ username });
+        if (existingUser) return res.status(400).json({ msg: 'User already exists' });
+
+        
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        
+        const newUser = new User({ username, password: hashedPassword });
+        await newUser.save();
+
+        res.status(201).json({ msg: 'User registered successfully' });
+    } catch (err) {
+        res.status(500).json({ msg: 'Server error' });
+    }
+});
+
+app.post('/login', async (req, res) => {
+    const { username, password } = req.body;
+
+    try {
+        
+        const user = await ModelUser.findOne({ username });
+        if (!user) return res.status(400).json({ msg: 'Invalid credentials' });
+
+        
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) return res.status(400).json({ msg: 'Invalid credentials' });
+
+        
+        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+        res.json({ token });
+    } catch (err) {
+        res.status(500).json({ msg: 'Server error' });
+    }
+});
+
+const authMiddleware = (req, res, next) => {
+    const token = req.header('x-auth-token');
+    if (!token) return res.status(401).json({ msg: 'No token, authorization denied' });
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = decoded;
+        next();
+    } catch (err) {
+        res.status(400).json({ msg: 'Token is not valid' });
+    }
+};
+
+
+app.get('/protected', authMiddleware, (req, res) => {
+    res.json({ msg: 'This is a protected route' });
+});
+
+
+
 
 app.use(express.json());
 app.use(router);
