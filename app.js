@@ -19,25 +19,37 @@ app.use(express.json());
 
 // Rutas y demás middlewares
 app.post('/register', async (req, res) => {
-  const { username, password } = req.body;
-  try {
-    const existingUser = await ModelUser.findOne({ username });
-    if (existingUser) return res.status(400).json({ msg: 'User already exists' });
-
-    const existingUsers = await ModelUser.find();
-    const role = existingUsers.length === 0 ? 'admin' : 'user';
-
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    const newUser = new ModelUser({ username, password: hashedPassword, role });
-    await newUser.save();
-
-    res.status(201).json({ msg: 'User registered successfully', role });
-  } catch (err) {
-    res.status(500).json({ msg: 'Server error' });
-  }
-});
+    const { username, password } = req.body;
+  
+    try {
+      // Verificar si el usuario ya existe
+      const existingUser = await ModelUser.findOne({ username });
+      if (existingUser) {
+        return res.status(400).json({ msg: 'User already exists' });
+      }
+  
+      // Verificar si es el primer usuario
+      const existingUsers = await ModelUser.find();
+      const role = existingUsers.length === 0 ? 'admin' : 'user';
+  
+      // Encriptar la contraseña
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+  
+      // Crear un nuevo usuario
+      const newUser = new ModelUser({
+        username,
+        password: hashedPassword,
+        role 
+      });
+      await newUser.save();
+  
+      res.status(201).json({ msg: 'User registered successfully', role });
+    } catch (err) {
+      console.error('Error en el registro:', err); // Agregar más detalles en los logs
+      res.status(500).json({ msg: 'Server error', error: err.message });
+    }
+  });
 
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
