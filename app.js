@@ -11,7 +11,7 @@ const router = express.Router();
 // Middleware
 app.use(express.json()); // Asegúrate de que esto esté antes de las rutas
 app.use(cors({
-  origin: 'https://api-node-jwit.onrender.com', // Permite solicitudes desde tu dominio local
+  origin: 'https://proyecto-noticiero.vercel.app', // Permite solicitudes desde tu dominio local
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
