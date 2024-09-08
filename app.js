@@ -1,22 +1,27 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const dbconnect = require('./config'); 
-const ModelUser = require('./userModel');
+const ModelUser = require('./models/userModel');
+const NewsModel = require('./models/NewsModel');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const app = express();
 const router = express.Router();
 
-// Middleware
-app.use(express.json()); // Asegúrate de que esto esté antes de las rutas
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+
+
+app.use(express.json()); 
 app.use(cors({
-  origin: 'https://proyecto-noticiero.vercel.app', // Permite solicitudes desde tu dominio local
+  origin: 'http://localhost:5173', 
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Rutas
+
 router.post("/", async (req, res) => {
     try {
         const body = req.body;
@@ -39,69 +44,6 @@ router.get('/users', async (req, res) => {
     }
 });
 
-router.get("/", async (req, res) => {
-    try {
-        const respuesta = await ModelUser.find({});
-        res.send(respuesta);
-    } catch (error) {
-        res.status(500).send(error.message);
-    }
-});
-
-router.get("/:id", async (req, res) => {
-    const id = req.params.id;
-    
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).send('Invalid ID');
-    }
-    
-    try {
-        const respuesta = await ModelUser.findById(id);
-        if (!respuesta) {
-            return res.status(404).send('User not found');
-        }
-        res.send(respuesta);
-    } catch (error) {
-        res.status(500).send(error.message);
-    }
-});
-
-router.put("/:id", async (req, res) => {
-    const id = req.params.id;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).send('Invalid ID');
-    }
-
-    try {
-        const body = req.body;
-        const respuesta = await ModelUser.findOneAndUpdate({_id: id}, body, { new: true });
-        if (!respuesta) {
-            return res.status(404).send('User not found');
-        }
-        res.send(respuesta);
-    } catch (error) {
-        res.status(500).send(error.message);
-    }
-});
-
-router.delete("/:id", async (req, res) => {
-    const id = req.params.id;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).send('Invalid ID');
-    }
-
-    try {
-        const respuesta = await ModelUser.deleteOne({_id: id});
-        if (respuesta.deletedCount === 0) {
-            return res.status(404).send('User not found');
-        }
-        res.send({ message: 'User deleted successfully' });
-    } catch (error) {
-        res.status(500).send(error.message);
-    }
-});
 
 app.post('/register', async (req, res) => {
     const { username, password } = req.body;
@@ -187,6 +129,94 @@ app.use(router);
 
 app.listen(3001, () => {
     console.log('El servidor está en el puerto 3001');
+});
+
+
+router.post('/news', async (req, res) => {
+    const { username, title, image, category, content, category_news } = req.body;
+
+    try {
+        const newNews = new NewsModel({
+            username: username || '', // Asignar una cadena vacía si no se proporciona
+            title,
+            image,  // Aquí podrías guardar una URL de Google Drive o base64
+            category,
+            content,
+            category_news
+        });
+
+        await newNews.save();
+        res.status(201).json({ msg: 'News created successfully', news: newNews });
+    } catch (err) {
+        res.status(500).json({ msg: 'Error creating news', error: err.message });
+    }
+});
+
+// Obtener todas las noticias
+router.get('/news', async (req, res) => {
+    try {
+        const newsList = await NewsModel.find();
+        res.json(newsList);
+    } catch (err) {
+        res.status(500).json({ msg: 'Error fetching news', error: err.message });
+    }
+});
+
+// Obtener una noticia por ID
+router.get('/news/:id', async (req, res) => {
+    const id = req.params.id;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).send('Invalid ID');
+    }
+
+    try {
+        const newsItem = await NewsModel.findById(id);
+        if (!newsItem) {
+            return res.status(404).send('News not found');
+        }
+        res.json(newsItem);
+    } catch (err) {
+        res.status(500).json({ msg: 'Error fetching news', error: err.message });
+    }
+});
+
+// Actualizar una noticia por ID
+router.put('/news/:id', async (req, res) => {
+    const id = req.params.id;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).send('Invalid ID');
+    }
+
+    try {
+        const updatedNews = await NewsModel.findOneAndUpdate({ _id: id }, req.body, { new: true });
+        if (!updatedNews) {
+            return res.status(404).send('News not found');
+        }
+        res.json(updatedNews);
+    } catch (err) {
+        res.status(500).json({ msg: 'Error updating news', error: err.message });
+    }
+});
+
+// Eliminar una noticia
+router.delete('/news/:id', async (req, res) => {
+    const id = req.params.id;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).send('Invalid ID');
+    }
+
+    try {
+        const deletedNews = await NewsModel.deleteOne({ _id: id });
+        if (deletedNews.deletedCount === 0) {
+            return res.status(404).send('News not found');
+        }
+        res.json({ msg: 'News deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ msg: 'Error deleting news', error: err.message });
+    }
 });
 
 dbconnect();
