@@ -2,7 +2,6 @@
   "name": "api_node",
   "version": "1.0.0",
   "main": "index.js",
-
   "prettier": {
     "singleQuote": false,
     "semi": true,
