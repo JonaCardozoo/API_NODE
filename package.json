@@ -2,6 +2,18 @@
   "name": "api_node",
   "version": "1.0.0",
   "main": "index.js",
+
+  "prettier": {
+    "singleQuote": false,
+    "semi": true,
+    "tabWidth": 2,
+    "printWidth": 110,
+    "trailingComma": "all",
+    "bracketSpacing": true,
+    "bracketSameLine": true,
+    "arrowParens": "always",
+    "endOfLine": "crlf"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node app.js",
@@ -19,9 +31,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.8.0",
     "mongoose": "^8.6.1",
-    "nodemon": "^3.1.4"
-  },
-  "devDependencies": {
-    "@flydotio/dockerfile": "^0.5.9"
+    "nodemon": "^3.1.4",
+    "prettier": "^3.3.3"
   }
 }
