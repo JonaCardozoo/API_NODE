@@ -1,6 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const dbconnect = require('./config'); 
+const dbconnect = require('./config');
 const ModelUser = require('./models/userModel');
 const NewsModel = require('./models/NewsModel');
 const bcrypt = require('bcryptjs');
@@ -9,42 +9,19 @@ const cors = require('cors');
 const app = express();
 const router = express.Router();
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
-
-
-
-app.use(express.json()); 
+// Configuración de CORS
 app.use(cors({
-  origin: 'https://proyecto-noticiero.vercel.app', 
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+    origin: '*', // Permitir todos los orígenes (modifica esto según sea necesario en producción)
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-
-router.post("/", async (req, res) => {
-    try {
-        const body = req.body;
-        const respuesta = await ModelUser.create(body);
-        res.send(respuesta);
-    } catch (error) {
-        res.status(500).send(error.message);
-    }
-});
-
-router.get('/users', async (req, res) => {
-    try {
-        console.log('Fetching users...');
-        const users = await ModelUser.find({});
-        console.log('Users fetched:', users);
-        res.json(users);
-    } catch (error) {
-        console.error('Error fetching users:', error);
-        res.status(500).json({ msg: 'Server error', error: error.message });
-    }
+app.use((req, res, next) => {
+    res.redirect('/');
 });
 
 
+// Registro de usuario
 app.post('/register', async (req, res) => {
     const { username, password } = req.body;
 
@@ -67,7 +44,7 @@ app.post('/register', async (req, res) => {
         const newUser = new ModelUser({
             username,
             password: hashedPassword,
-            role 
+            role
         });
         await newUser.save();
 
@@ -78,9 +55,10 @@ app.post('/register', async (req, res) => {
     }
 });
 
-
+// Login de usuario
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
+
 
     try {
         const user = await ModelUser.findOne({ username });
@@ -96,11 +74,11 @@ app.post('/login', async (req, res) => {
         const payload = {
             user: {
                 id: user._id,
-                role: user.role 
+                role: user.role
             }
         };
 
-        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '24h' });
 
         res.json({ token, role: user.role });
     } catch (err) {
@@ -108,6 +86,7 @@ app.post('/login', async (req, res) => {
     }
 });
 
+// Middleware de autenticación
 const authMiddleware = (req, res, next) => {
     const token = req.header('x-auth-token');
     if (!token) return res.status(401).json({ msg: 'No token, authorization denied' });
@@ -121,17 +100,12 @@ const authMiddleware = (req, res, next) => {
     }
 };
 
+// Ruta protegida
 app.get('/protected', authMiddleware, (req, res) => {
     res.json({ msg: 'This is a protected route' });
 });
 
-app.use(router);
-
-app.listen(3001, () => {
-    console.log('El servidor está en el puerto 3001');
-});
-
-
+// Crear una noticia
 router.post('/news', async (req, res) => {
     const { username, title, image, category, content, category_news } = req.body;
 
@@ -181,6 +155,10 @@ router.get('/news/:id', async (req, res) => {
     }
 });
 
+app.get("/healthz", (req, res) => {
+    res.status(200).send("OK");
+});
+
 // Actualizar una noticia por ID
 router.put('/news/:id', async (req, res) => {
     const id = req.params.id;
@@ -218,5 +196,27 @@ router.delete('/news/:id', async (req, res) => {
         res.status(500).json({ msg: 'Error deleting news', error: err.message });
     }
 });
+
+// Middleware para manejar rutas no encontradas (404)
+app.use((req, res, next) => {
+    res.redirect('/');
+});
+
+// Middleware para manejo de errores globales
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ msg: 'Server error', error: err.message });
+});
+
+// Configurar las rutas
+app.use(router);
+
+// Conectar a la base de datos y escuchar en el puerto adecuado
+const PORT = process.env.PORT || 3000; // Usa el puerto de la variable de entorno
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`El servidor está en el puerto ${PORT}`);
+});
+
+
 
 dbconnect();
