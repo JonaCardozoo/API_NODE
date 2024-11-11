@@ -16,8 +16,9 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+
 app.use((req, res, next) => {
-    res.redirect('/');
+    res.status(200).send("Funcionando");
 });
 
 
