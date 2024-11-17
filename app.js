@@ -11,17 +11,38 @@ const router = express.Router();
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
-
-
-
 app.use(express.json());
+
+// Configuración de CORS
 app.use(cors({
     origin: 'https://proyecto-noticiero.vercel.app',
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+// Middleware de autenticación
+const authMiddleware = (req, res, next) => {
+    const token = req.header('x-auth-token');
+    if (!token) return res.status(401).json({ msg: 'No token, authorization denied' });
 
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = decoded.user;  // Agregar datos del usuario al objeto req
+        next();
+    } catch (err) {
+        res.status(400).json({ msg: 'Token is not valid' });
+    }
+};
+
+// Middleware de autorización de administrador
+const adminMiddleware = (req, res, next) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ msg: 'Access denied. Admins only.' });
+    }
+    next();
+};
+
+// Rutas de usuarios
 router.post("/", async (req, res) => {
     try {
         const body = req.body;
@@ -32,11 +53,11 @@ router.post("/", async (req, res) => {
     }
 });
 
-router.get('/users', async (req, res) => {
+// Ruta protegida: Solo admins pueden acceder a esta ruta
+router.get('/users', authMiddleware, adminMiddleware, async (req, res) => {
     try {
-        console.log('Fetching users...');
+
         const users = await ModelUser.find({});
-        console.log('Users fetched:', users);
         res.json(users);
     } catch (error) {
         console.error('Error fetching users:', error);
@@ -44,7 +65,7 @@ router.get('/users', async (req, res) => {
     }
 });
 
-
+// Ruta de registro
 app.post('/register', async (req, res) => {
     const { username, password } = req.body;
 
@@ -78,7 +99,7 @@ app.post('/register', async (req, res) => {
     }
 });
 
-
+// Ruta de login
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
 
@@ -100,7 +121,7 @@ app.post('/login', async (req, res) => {
             }
         };
 
-        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '24h' });
 
         res.json({ token, role: user.role });
     } catch (err) {
@@ -108,38 +129,15 @@ app.post('/login', async (req, res) => {
     }
 });
 
-const authMiddleware = (req, res, next) => {
-    const token = req.header('x-auth-token');
-    if (!token) return res.status(401).json({ msg: 'No token, authorization denied' });
-
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = decoded;
-        next();
-    } catch (err) {
-        res.status(400).json({ msg: 'Token is not valid' });
-    }
-};
-
-app.get('/protected', authMiddleware, (req, res) => {
-    res.json({ msg: 'This is a protected route' });
-});
-
-app.use(router);
-
-app.listen(3001, () => {
-    console.log('El servidor está en el puerto 3001');
-});
-
-
-router.post('/news', async (req, res) => {
+// Ruta de noticias (ejemplo de ruta de noticias protegida)
+router.post('/news', authMiddleware, async (req, res) => {
     const { username, title, image, category, content, category_news } = req.body;
 
     try {
         const newNews = new NewsModel({
-            username: username || '', // Asignar una cadena vacía si no se proporciona
+            username: username || '',  // Asignar una cadena vacía si no se proporciona
             title,
-            image,  // Aquí podrías guardar una URL de Google Drive o base64
+            image,
             category,
             content,
             category_news
@@ -152,11 +150,7 @@ router.post('/news', async (req, res) => {
     }
 });
 
-app.get("/healthz", (req, res) => {
-    res.status(200).send("OK");
-});
-
-// Obtener todas las noticias
+// Ruta de noticias: Obtener todas las noticias
 router.get('/news', async (req, res) => {
     try {
         const newsList = await NewsModel.find();
@@ -166,61 +160,9 @@ router.get('/news', async (req, res) => {
     }
 });
 
-// Obtener una noticia por ID
-router.get('/news/:id', async (req, res) => {
-    const id = req.params.id;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).send('Invalid ID');
-    }
 
-    try {
-        const newsItem = await NewsModel.findById(id);
-        if (!newsItem) {
-            return res.status(404).send('News not found');
-        }
-        res.json(newsItem);
-    } catch (err) {
-        res.status(500).json({ msg: 'Error fetching news', error: err.message });
-    }
-});
+app.use(router);
 
-// Actualizar una noticia por ID
-router.put('/news/:id', async (req, res) => {
-    const id = req.params.id;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).send('Invalid ID');
-    }
-
-    try {
-        const updatedNews = await NewsModel.findOneAndUpdate({ _id: id }, req.body, { new: true });
-        if (!updatedNews) {
-            return res.status(404).send('News not found');
-        }
-        res.json(updatedNews);
-    } catch (err) {
-        res.status(500).json({ msg: 'Error updating news', error: err.message });
-    }
-});
-
-// Eliminar una noticia
-router.delete('/news/:id', async (req, res) => {
-    const id = req.params.id;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).send('Invalid ID');
-    }
-
-    try {
-        const deletedNews = await NewsModel.deleteOne({ _id: id });
-        if (deletedNews.deletedCount === 0) {
-            return res.status(404).send('News not found');
-        }
-        res.json({ msg: 'News deleted successfully' });
-    } catch (err) {
-        res.status(500).json({ msg: 'Error deleting news', error: err.message });
-    }
-});
-
+// Conectar a la base de datos y arrancar el servidor
 dbconnect();
