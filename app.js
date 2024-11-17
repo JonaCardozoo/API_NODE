@@ -53,14 +53,13 @@ router.post("/", async (req, res) => {
     }
 });
 
-// Ruta protegida: Solo admins pueden acceder a esta ruta
-router.get('/users', authMiddleware, adminMiddleware, async (req, res) => {
-    try {
 
+router.get('/users', authMiddleware, adminMiddleware, async (res) => {
+    try {
         const users = await ModelUser.find({});
         res.json(users);
     } catch (error) {
-        console.error('Error fetching users:', error);
+
         res.status(500).json({ msg: 'Server error', error: error.message });
     }
 });
@@ -94,7 +93,7 @@ app.post('/register', async (req, res) => {
 
         res.status(201).json({ msg: 'User registered successfully', role });
     } catch (err) {
-        console.error('Error in /register:', err);
+
         res.status(500).json({ msg: 'Server error' });
     }
 });
