@@ -53,13 +53,14 @@ router.post("/", async (req, res) => {
     }
 });
 
-
-router.get('/users', authMiddleware, adminMiddleware, async (res) => {
+// Ruta protegida: Solo admins pueden acceder a esta ruta
+router.get('/users', authMiddleware, adminMiddleware, async (req, res) => {
     try {
+        console.log('Fetching users...');
         const users = await ModelUser.find({});
+        console.log('Users fetched:', users);
         res.json(users);
     } catch (error) {
-
         res.status(500).json({ msg: 'Server error', error: error.message });
     }
 });
@@ -93,7 +94,6 @@ app.post('/register', async (req, res) => {
 
         res.status(201).json({ msg: 'User registered successfully', role });
     } catch (err) {
-
         res.status(500).json({ msg: 'Server error' });
     }
 });
@@ -159,9 +159,16 @@ router.get('/news', async (req, res) => {
     }
 });
 
-
+// Health check endpoint
+app.get("/healthz", (req, res) => {
+    res.status(200).send("OK");
+});
 
 app.use(router);
 
 // Conectar a la base de datos y arrancar el servidor
 dbconnect();
+
+app.listen(3001, () => {
+    console.log('El servidor está en el puerto 3001');
+});
