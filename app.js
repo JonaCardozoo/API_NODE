@@ -15,7 +15,7 @@ app.use(express.json());
 
 // Configuración de CORS
 app.use(cors({
-    origin: 'https://proyecto-noticiero.vercel.app',
+    origin: 'https://proyecto-noticiero.vercel.app/',
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -62,39 +62,6 @@ router.get('/users', authMiddleware, adminMiddleware, async (req, res) => {
         res.json(users);
     } catch (error) {
         res.status(500).json({ msg: 'Server error', error: error.message });
-    }
-});
-
-// Ruta de registro
-app.post('/register', async (req, res) => {
-    const { username, password } = req.body;
-
-    if (!username || !password) {
-        return res.status(400).json({ msg: 'Username and password are required' });
-    }
-
-    try {
-        const existingUser = await ModelUser.findOne({ username });
-        if (existingUser) {
-            return res.status(400).json({ msg: 'User already exists' });
-        }
-
-        const existingUsers = await ModelUser.find();
-        const role = existingUsers.length === 0 ? 'admin' : 'user';
-
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-
-        const newUser = new ModelUser({
-            username,
-            password: hashedPassword,
-            role
-        });
-        await newUser.save();
-
-        res.status(201).json({ msg: 'User registered successfully', role });
-    } catch (err) {
-        res.status(500).json({ msg: 'Server error' });
     }
 });
 
