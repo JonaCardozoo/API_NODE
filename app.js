@@ -15,7 +15,7 @@ app.use(express.json());
 
 // Configuración de CORS
 app.use(cors({
-    origin: 'https://proyecto-noticiero.vercel.app/',
+    origin: 'https://proyecto-noticiero.vercel.app',
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
