@@ -95,13 +95,13 @@ app.post('/login', async (req, res) => {
     }
 });
 
-// Ruta de noticias (ejemplo de ruta de noticias protegida)
-router.post('/news', authMiddleware, async (req, res) => {
+
+router.post('/news', adminMiddleware, async (req, res) => {
     const { username, title, image, category, content, category_news } = req.body;
 
     try {
         const newNews = new NewsModel({
-            username: username || '',  // Asignar una cadena vacía si no se proporciona
+            username: username || '',
             title,
             image,
             category,
@@ -116,11 +116,25 @@ router.post('/news', authMiddleware, async (req, res) => {
     }
 });
 
-// Ruta de noticias: Obtener todas las noticias
+
 router.get('/news', async (req, res) => {
     try {
         const newsList = await NewsModel.find();
         res.json(newsList);
+    } catch (err) {
+        res.status(500).json({ msg: 'Error fetching news', error: err.message });
+    }
+});
+
+router.get('/news/:idNoticia', async (req, res) => {
+    try {
+        const { idNoticia } = req.params;
+
+        const news = await NewsModel.findOne({ idNoticia });
+        if (!news) {
+            return res.status(404).json({ msg: 'News not found' });
+        }
+        res.json(news);
     } catch (err) {
         res.status(500).json({ msg: 'Error fetching news', error: err.message });
     }
